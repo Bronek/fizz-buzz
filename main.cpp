@@ -23,15 +23,59 @@ struct fixed_string {
     }
 };
 
-// TODO
-//
+template <typename ...> struct data;
+
+template <typename T, typename S, typename ... Ts>
+struct data<T, S, Ts...> : data<Ts...> {
+    T element;
+
+    constexpr data(T&& v, data<Ts...>&& b)
+        : data<Ts...>(std::move(b))
+        , element(std::move(v))
+    {}
+
+    template <typename Sn>
+    constexpr auto const& get() const {
+        return this->select(std::type_identity_t<Sn>{});
+    }
+
+    template <typename Sn, typename Tn>
+    constexpr auto append(Tn&& v) && {
+        return data<Tn, Sn, T, S, Ts...>{std::move(v), std::move(*this)};
+    }
+
+protected:
+    using data<Ts...>::select;
+    constexpr auto const& select(std::type_identity_t<S>) const {
+        return element;
+    }
+};
+
+template <>
+struct data<> {
+    constexpr data() = default;
+
+    template <typename Sn, typename Tn>
+    constexpr auto append(Tn&& v) && {
+        return data<Tn, Sn>{std::move(v), std::move(*this)};
+    }
+
+protected:
+    constexpr void select() const {}
+};
 
 template <auto v>
 void print() {
     std::cout << v << '\n';
 }
 
+enum HelloWorld{};
+enum TheAnswer{};
+
 int main() {
-    print<fixed_string("Hello World")>();
-    print<42>();
+    constexpr auto d = data{}.
+        append<HelloWorld>(fixed_string{"HelloWorld"}).
+        append<TheAnswer>(42);
+    print<d.get<HelloWorld>()>();
+    print<d.get<TheAnswer>()>();
 }
