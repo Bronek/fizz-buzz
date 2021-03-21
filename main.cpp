@@ -124,19 +124,18 @@ constexpr auto fizzbuzz() noexcept {
     else return res;
 }
 
-template <unsigned int N, typename Fn>
-constexpr void fizzbuzz(const Fn& fn) noexcept {
-    if constexpr (N <= 1) {
-        fn(fizzbuzz<N>());
-    }
-    else {
-        fizzbuzz<N-1>(fn);
-        fn(fizzbuzz<N>());
-    }
+template <unsigned int ... N, typename Fn>
+constexpr void fizzbuzz(std::integer_sequence<unsigned int, N...>, const Fn& fn) noexcept {
+    (fn(fizzbuzz<N>()), ...);
+}
+
+template <unsigned int ... N>
+constexpr auto plus1(std::integer_sequence<unsigned int, N...>) noexcept {
+    return std::integer_sequence<unsigned int, (N + 1) ...>{};
 }
 
 int main() {
-    fizzbuzz<100>([](auto d){
+    fizzbuzz(plus1(std::make_integer_sequence<unsigned int, 100>{}), [](auto d){
         std::puts(d.c_str());
     });
 }
