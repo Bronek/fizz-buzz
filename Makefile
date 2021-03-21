@@ -3,7 +3,7 @@ COMPILER  ?= clang++-12
 CXXVER    ?= 2a
 CXXDBG    ?= 0
 CXXOPT    ?= 2
-CXXFLAGS   = -c -Wall -Wextra -Wpedantic -std=c++$(CXXVER) -O$(CXXOPT) -g$(CXXDBG)
+CXXFLAGS   = -c -Wall -Wextra -Wpedantic -Wno-type-limits -std=c++$(CXXVER) -O$(CXXOPT) -g$(CXXDBG)
 LDFLAGS   ?=
 SOURCES    = $(wildcard *.cpp)
 OBJECTS    = $(SOURCES:.cpp=.o)
