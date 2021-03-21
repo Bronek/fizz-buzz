@@ -1,11 +1,8 @@
 // vim: set ft=cpp et ts=4 sw=4:
 
 #include <cstdio>
-#include <iostream>
 #include <array>
 #include <type_traits>
-#include <limits>
-
 
 template <size_t N>
 struct fixed_string {
@@ -62,14 +59,6 @@ struct fixed_string {
     constexpr auto c_str() const -> char const* {
         return _data_.data();
     }
-
-    constexpr operator std::string_view() const {
-        return {_data_.data(), N};
-    }
-
-    friend auto operator<<(std::ostream& o, const fixed_string& s) -> std::ostream& {
-        return (o << std::string_view{s});
-    }
 };
 
 constexpr auto digits(unsigned int i) {
@@ -92,16 +81,28 @@ constexpr auto format() -> fixed_string<digits(N) + 1> {
     }
 }
 
+template <unsigned int N>
+constexpr auto fizzbuzz() {
+    if constexpr (N == 0) return format<N>();
+    else if constexpr (N % 5 == 0 && N % 3 == 0) return fixed_string{"fizzbuzz"};
+    else if constexpr (N % 5 == 0) return fixed_string{"buzz"};
+    else if constexpr (N % 3 == 0) return fixed_string{"fizz"};
+    else return format<N>();
+}
 
+template <unsigned int N, typename Fn>
+constexpr void fizzbuzz(const Fn& fn) {
+    if constexpr (N <= 1) {
+        fn(fizzbuzz<N>());
+    }
+    else {
+        fizzbuzz<N-1>(fn);
+        fn(fizzbuzz<N>());
+    }
+}
 
 int main() {
-    constexpr auto fizz = fixed_string{""}.append(fixed_string{"fizz"});
-    std::printf("%s\n", fizz.c_str());
-    constexpr auto buzz = fixed_string{"buzz"};
-    std::printf("%s\n", buzz.c_str());
-    constexpr auto fizzbuzz = fizz.append(buzz);
-    std::printf("%s\n", fizzbuzz.c_str());
-    std::cout << fizzbuzz.append(']').prepend('[') << '\n';
-    constexpr auto num = format<42>();
-    std::puts(fixed_string{"num:"}.append(num).c_str());
+    fizzbuzz<100>([](auto d){
+        std::puts(d.c_str());
+    });
 }
