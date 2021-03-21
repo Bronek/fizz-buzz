@@ -6,15 +6,17 @@
 
 template <size_t N>
 struct fixed_string {
-    // _data_ should be private
+private:
+    template <size_t> friend struct fixed_string;
     std::array<char, N> _data_;
 
-    constexpr fixed_string() {
+public:
+    constexpr fixed_string() noexcept {
         for (size_t i = 0; i < N; ++i) {
             _data_[i] = 0;
         }
     }
-    constexpr fixed_string(char const (&str)[N]) {
+    constexpr fixed_string(char const (&str)[N]) noexcept {
         for (size_t i = 0; i < N; ++i) {
             _data_[i] = str[i];
         }
@@ -24,8 +26,7 @@ struct fixed_string {
     constexpr fixed_string(fixed_string const&) = default;
 
     template <size_t Ns>
-    constexpr auto append(fixed_string<Ns> const& other) const -> fixed_string<N + Ns - 1>
-    {
+    constexpr auto append(fixed_string<Ns> const& other) const noexcept -> fixed_string<N + Ns - 1> {
         auto res = fixed_string<N + Ns - 1>{};
         for (size_t i = 0; i < N - 1; ++i) {
             res._data_[i] = _data_[i];
@@ -36,8 +37,7 @@ struct fixed_string {
         return res;
     }
 
-    constexpr auto append(char c) const -> fixed_string<N + 1>
-    {
+    constexpr auto append(char c) const noexcept -> fixed_string<N + 1> {
         auto res = fixed_string<N + 1>{};
         for (size_t i = 0; i < N - 1; ++i) {
             res._data_[i] = _data_[i];
@@ -46,8 +46,7 @@ struct fixed_string {
         return res;
     }
 
-    constexpr auto prepend(char c) const -> fixed_string<N + 1>
-    {
+    constexpr auto prepend(char c) const noexcept -> fixed_string<N + 1> {
         auto res = fixed_string<N + 1>{};
         for (size_t i = 1; i <= N; ++i) {
             res._data_[i] = _data_[i - 1];
@@ -56,12 +55,12 @@ struct fixed_string {
         return res;
     }
 
-    constexpr auto c_str() const -> char const* {
-        return _data_.data();
-    }
+    // note: users of these two functions may not expect nul in the middle
+    constexpr auto empty() const noexcept { return _data_[0] == 0; }
+    constexpr auto c_str() const noexcept -> char const* { return _data_.data(); }
 };
 
-constexpr auto digits(unsigned int i) {
+constexpr auto digits(unsigned int i) noexcept {
     static_assert(sizeof(decltype(i)) == 4);
     int res = 1;
     while (i > 9) {
@@ -71,8 +70,8 @@ constexpr auto digits(unsigned int i) {
     return res;
 }
 
-template <size_t N>
-constexpr auto format() -> fixed_string<digits(N) + 1> {
+template <unsigned int N>
+constexpr auto format() noexcept -> fixed_string<digits(N) + 1> {
     if constexpr (N > 9)
         return format<(N / 10)>().append('0' + (N % 10));
     else {
@@ -82,16 +81,26 @@ constexpr auto format() -> fixed_string<digits(N) + 1> {
 }
 
 template <unsigned int N>
-constexpr auto fizzbuzz() {
-    if constexpr (N == 0) return format<N>();
-    else if constexpr (N % 5 == 0 && N % 3 == 0) return fixed_string{"fizzbuzz"};
-    else if constexpr (N % 5 == 0) return fixed_string{"buzz"};
-    else if constexpr (N % 3 == 0) return fixed_string{"fizz"};
-    else return format<N>();
+constexpr auto fizzbuzz() noexcept {
+    constexpr auto fizzpart = []<unsigned int Ns>() {
+        if constexpr (Ns % 3 == 0) return fixed_string{"fizz"};
+        else return fixed_string{""};
+    };
+    constexpr auto buzzpart = []<unsigned int Ns>() {
+        if constexpr (Ns % 5 == 0) return fixed_string{"buzz"};
+        else return fixed_string{""};
+    };
+
+    constexpr auto res = fixed_string{""}
+        .append(fizzpart.template operator()<N>())
+        .append(buzzpart.template operator()<N>());
+
+    if constexpr (res.empty()) return format<N>();
+    else return res;
 }
 
 template <unsigned int N, typename Fn>
-constexpr void fizzbuzz(const Fn& fn) {
+constexpr void fizzbuzz(const Fn& fn) noexcept {
     if constexpr (N <= 1) {
         fn(fizzbuzz<N>());
     }
